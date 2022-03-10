@@ -4,27 +4,31 @@ import streamlit as st
 import altair as alt
 from altair import datum
 
-def top_hat(x, fwidth):
+def top_hat(t, fwidth):
+    N = len(t)
     y = np.zeros(N)
-    i = np.where(np.abs(x) < fwidth)
+    i = np.where(np.abs(t) < fwidth)
     y[i] = 1.0
     return y
 
-def ramp(x, fwidth):
+def ramp(t, fwidth):
+    N = len(t)
     y = np.zeros(N)
-    i = np.where(np.abs(x) < fwidth)
-    y[i] = x[i]/fwidth
+    i = np.where(np.abs(t) < fwidth)
+    y[i] = t[i]/fwidth
     return y
 
-def delta(x, fwidth):
+def delta(t, fwidth):
+    N = len(t)
     y = np.zeros(N)
-    i = np.where(x == float(fwidth))
+    i = np.where(t == float(fwidth))
     y[i] = 1.0
     return y
 
 def get_cossin(data, u=5):
-    data["cos"] =  np.cos(2*np.pi*u/1000.0*x)
-    data["sin"] = -np.sin(2*np.pi*u/1000.0*x)
+    t = data["t"]
+    data["cos"] =  np.cos(2*np.pi*u/1000.0*t)
+    data["sin"] = -np.sin(2*np.pi*u/1000.0*t)
     data["cos1"] = data["1"]*data["cos"]
     data["sin1"] = data["1"]*data["sin"]
     data["cos2"] = data["2"]*data["cos"]
@@ -33,18 +37,18 @@ def get_cossin(data, u=5):
     data["sin3"] = data["3"]*data["sin"]
     return data
 
-def get_data(x, fwidth=50):
-    data = pd.DataFrame(data={"x": x,
-                              "1": top_hat(x, fwidth),
-                              "2": ramp(x, fwidth),
-                              "3": delta(x, fwidth)})
+def get_data(t, fwidth=50):
+    data = pd.DataFrame(data={"t": t,
+                              "1": top_hat(t, fwidth),
+                              "2": ramp(t, fwidth),
+                              "3": delta(t, fwidth)})
     return data
 
-def get_fft(xi, fwidth=50):
-    v = 2.0*np.pi/1000.0*fwidth*xi
-    zeros = np.zeros(len(xi))
-    fft = pd.DataFrame(data={"x": xi,
-                             "real1": np.sin(2*np.pi/1000.0*fwidth*xi)/(2*np.pi/1000.0*fwidth*xi),
+def get_fft(u, fwidth=50):
+    v = 2.0*np.pi/1000.0*fwidth*u
+    zeros = np.zeros(len(u))
+    fft = pd.DataFrame(data={"u": u,
+                             "real1": np.sin(2*np.pi/1000.0*fwidth*u)/(2*np.pi/1000.0*fwidth*u),
                              "imag1": zeros,
                              "real2": zeros,
                              "imag2": -2.0*(np.sin(v)-v*np.cos(v))/(v*v),
@@ -54,13 +58,13 @@ def get_fft(xi, fwidth=50):
     fft["imag2"] = fft["imag2"].fillna(0.0)
     return fft
 
-x = np.linspace(-160, 160, 321)
-N = len(x)
-xi = np.linspace(-80, 80, 161)
+t = np.linspace(-160, 160, 321)
+N = len(t)
+u = np.linspace(-80, 80, 161)
 fwidth = 50
 
-data = get_data(x, fwidth)
-fft = get_fft(xi, fwidth)
+data = get_data(t, fwidth)
+fft = get_fft(u, fwidth)
 
 st.set_page_config(layout="wide")
 st.title('Fourier transforms 1D')
@@ -74,41 +78,46 @@ component = choice.selectbox("Select component",
                              ["real", "imaginary"],
                              index=0,)
 
-u = choice.slider('Select frequency', 0, 80, 5)
+u = choice.slider('Select frequency', -80, 80, 5)
 data = get_cossin(data, u=u)
 
-function = "top hat"
 data_dict = {"top hat": ["1", "cos1", "sin1", "real1", "imag1", "cos", "sin"],
              "ramp":    ["2", "cos2", "sin2", "real2", "imag2", "cos", "sin"],
              "delta":   ["3", "cos3", "sin3", "real3", "imag3", "cos", "sin"]}
 
 cols = data_dict[function]
-pd.set_option('display.max_rows', 500)
-pdb.set_trace()
+# pd.set_option('display.max_rows', 500)
 
 ymin, ymax = (-1.1, 1.1)
-p1 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[0], scale=alt.Scale(domain=[ymin, ymax])))
+p1 = alt.Chart(data, title="f(t)").mark_line().encode(x="t:Q",
+                                                      y=alt.Y(cols[0], title="", scale=alt.Scale(domain=[ymin, ymax])))
 if component == "real":
-    p2 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[1], scale=alt.Scale(domain=[ymin, ymax])))
-    p3 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[5], scale=alt.Scale(domain=[ymin, ymax])))
-    rule = alt.Chart(data).mark_rule().encode(x="x").transform_filter(datum.x = u)
-    p4 = alt.Chart(fft).mark_line().encode(x="x",  y=alt.Y(cols[3], scale=alt.Scale(domain=[ymin, ymax])))
+    p2 = alt.Chart(data, title="f(t)*cos(-2*pi*u*t)").mark_line().encode(x="t:Q",
+                   y=alt.Y(cols[1], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    p3 = alt.Chart(data, title="cos(-2*pi*u*t)").mark_line().encode(x="t:Q",
+                   y=alt.Y(cols[5], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    p4 = alt.Chart(fft, title="real part").mark_line().encode(x="u:Q",
+                   y=alt.Y(cols[3], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    rule = alt.Chart(fft).mark_rule().encode(x="u:Q").transform_filter(datum.u == u)
 else:
-    p2 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[2], scale=alt.Scale(domain=[ymin, ymax])))
-    p3 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[6], scale=alt.Scale(domain=[ymin, ymax])))
-    rule = alt.Chart(data).mark_rule().encode(x="x").transform_filter(datum.x = u)
-    p4 = alt.Chart(fft).mark_line().encode(x="x",  y=alt.Y(cols[4], scale=alt.Scale(domain=[ymin, ymax])))
+    p2 = alt.Chart(data, title="f(t)*sin(-2*pi*u*t)").mark_line().encode(x="t:Q",
+                   y=alt.Y(cols[2], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    p3 = alt.Chart(data, title="sin(-2*pi*u*t)").mark_line().encode(x="t:Q",
+                   y=alt.Y(cols[6], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    p4 = alt.Chart(fft, title="imag part").mark_line().encode(x="u:Q",
+                   y=alt.Y(cols[4], title="", scale=alt.Scale(domain=[ymin, ymax])))
+    rule = alt.Chart(fft).mark_rule().encode(x="u:Q").transform_filter(datum.u == u)
 
 col1.altair_chart(p1, use_container_width=True)
 col1.altair_chart(p2, use_container_width=True)
-col2.altair_chart(p3+rule, use_container_width=True)
-col2.altair_chart(p4, use_container_width=True)
+col2.altair_chart(p3, use_container_width=True)
+col2.altair_chart(p4+rule, use_container_width=True)
 
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# hide_st_style = """
+#             <style>
+#             #MainMenu {visibility: hidden;}
+#             footer {visibility: hidden;}
+#             header {visibility: hidden;}
+#             </style>
+#             """
+# st.markdown(hide_st_style, unsafe_allow_html=True)
