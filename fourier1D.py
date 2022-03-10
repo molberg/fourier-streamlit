@@ -4,6 +4,8 @@ import streamlit as st
 import altair as alt
 from altair import datum
 
+np.seterr(divide='ignore', invalid='ignore')
+
 def top_hat(t, fwidth):
     N = len(t)
     y = np.zeros(N)
@@ -68,17 +70,17 @@ fft = get_fft(u, fwidth)
 
 st.set_page_config(layout="wide")
 st.title('Fourier transforms 1D')
-choice, col1, col2 = st.columns([1, 3, 3])
+col1, col2 = st.columns(2)
 
-function = choice.selectbox("Select a function",
+function = st.sidebar.selectbox("Select a function",
                             ["top hat", "ramp", "delta"],
                             index=0,)
 
-component = choice.selectbox("Select component",
+component = st.sidebar.selectbox("Select component",
                              ["real", "imaginary"],
                              index=0,)
 
-u = choice.slider('Select frequency', -80, 80, 5)
+u = st.sidebar.slider('Select frequency', -80, 80, 5)
 data = get_cossin(data, u=u)
 
 data_dict = {"top hat": ["1", "cos1", "sin1", "real1", "imag1", "cos", "sin"],
@@ -113,6 +115,7 @@ col1.altair_chart(p2, use_container_width=True)
 col2.altair_chart(p3, use_container_width=True)
 col2.altair_chart(p4+rule, use_container_width=True)
 
+
 # hide_st_style = """
 #             <style>
 #             #MainMenu {visibility: hidden;}
@@ -121,3 +124,14 @@ col2.altair_chart(p4+rule, use_container_width=True)
 #             </style>
 #             """
 # st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# import plotly.graph_objects as go
+#
+# fig = go.Figure()
+# fig.add_trace(go.Scatter(x=data["t"], y=data[cols[0]]))
+# fig.update_layout(title='f(t)',
+#                   xaxis_title='t',
+#                   yaxis_title='',
+#                   width=800, height=800,
+#                   margin=dict(l=40, r=40, b=40, t=40))
+# st.plotly_chart(fig)
