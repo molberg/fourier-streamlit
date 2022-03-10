@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import altair as alt
+from altair import datum
 
 def top_hat(x, fwidth):
     y = np.zeros(N)
@@ -73,7 +74,7 @@ component = choice.selectbox("Select component",
                              ["real", "imaginary"],
                              index=0,)
 
-u = 5.0
+u = choice.slider('Select frequency', 0, 80, 5)
 data = get_cossin(data, u=u)
 
 function = "top hat"
@@ -90,16 +91,18 @@ p1 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[0], scale=alt.Scale(
 if component == "real":
     p2 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[1], scale=alt.Scale(domain=[ymin, ymax])))
     p3 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[5], scale=alt.Scale(domain=[ymin, ymax])))
+    rule = alt.Chart(data).mark_rule().encode(x="x").transform_filter(datum.x = u)
     p4 = alt.Chart(fft).mark_line().encode(x="x",  y=alt.Y(cols[3], scale=alt.Scale(domain=[ymin, ymax])))
 else:
     p2 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[2], scale=alt.Scale(domain=[ymin, ymax])))
     p3 = alt.Chart(data).mark_line().encode(x="x", y=alt.Y(cols[6], scale=alt.Scale(domain=[ymin, ymax])))
+    rule = alt.Chart(data).mark_rule().encode(x="x").transform_filter(datum.x = u)
     p4 = alt.Chart(fft).mark_line().encode(x="x",  y=alt.Y(cols[4], scale=alt.Scale(domain=[ymin, ymax])))
 
-# col1.altair_chart(p1, use_container_width=True)
-# col1.altair_chart(p2, use_container_width=True)
-# col2.altair_chart(p3, use_container_width=True)
-# col2.altair_chart(p4, use_container_width=True)
+col1.altair_chart(p1, use_container_width=True)
+col1.altair_chart(p2, use_container_width=True)
+col2.altair_chart(p3+rule, use_container_width=True)
+col2.altair_chart(p4, use_container_width=True)
 
 hide_st_style = """
             <style>
