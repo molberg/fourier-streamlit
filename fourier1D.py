@@ -1,11 +1,10 @@
-import pandas as pd
 import numpy as np
 import streamlit as st
-import altair as alt
-from altair import datum
+import plotly.graph_objects as go
 
 np.seterr(divide='ignore', invalid='ignore')
 
+@st.cache(suppress_st_warning=True)
 def top_hat(t, fwidth):
     N = len(t)
     y = np.zeros(N)
@@ -13,6 +12,7 @@ def top_hat(t, fwidth):
     y[i] = 1.0
     return y
 
+@st.cache(suppress_st_warning=True)
 def ramp(t, fwidth):
     N = len(t)
     y = np.zeros(N)
@@ -20,6 +20,7 @@ def ramp(t, fwidth):
     y[i] = t[i]/fwidth
     return y
 
+@st.cache(suppress_st_warning=True)
 def delta(t, fwidth):
     N = len(t)
     y = np.zeros(N)
@@ -27,37 +28,54 @@ def delta(t, fwidth):
     y[i] = 1.0
     return y
 
-def get_cossin(data, u=5):
-    t = data["t"]
-    data["cos"] =  np.cos(2*np.pi*u/1000.0*t)
-    data["sin"] = -np.sin(2*np.pi*u/1000.0*t)
-    data["cos1"] = data["1"]*data["cos"]
-    data["sin1"] = data["1"]*data["sin"]
-    data["cos2"] = data["2"]*data["cos"]
-    data["sin2"] = data["2"]*data["sin"]
-    data["cos3"] = data["3"]*data["cos"]
-    data["sin3"] = data["3"]*data["sin"]
-    return data
+@st.cache(suppress_st_warning=True)
+def get_cos(t, f):
+    y = np.cos(2*np.pi*f/1000.0*t)
+    return y
 
-def get_data(t, fwidth=50):
-    data = pd.DataFrame(data={"t": t,
-                              "1": top_hat(t, fwidth),
-                              "2": ramp(t, fwidth),
-                              "3": delta(t, fwidth)})
-    return data
+@st.cache(suppress_st_warning=True)
+def get_sin(t, f):
+    y = -np.sin(2*np.pi*f/1000.0*t)
+    return y
 
-def get_fft(u, fwidth=50):
+@st.cache(suppress_st_warning=True)
+def get_sin(t, f):
+    y = -np.sin(2*np.pi*f/1000.0*t)
+    return y
+
+@st.cache(suppress_st_warning=True)
+def get_fcos(ft, t, f):
+    fy = ft * get_cos(t, f)
+    return fy
+
+@st.cache(suppress_st_warning=True)
+def get_fsin(ft, t, f):
+    fy = ft * get_sin(t, f)
+    return fy
+
+@st.cache(suppress_st_warning=True)
+def get_fft(model, part, u, fwidth):
     v = 2.0*np.pi/1000.0*fwidth*u
     zeros = np.zeros(len(u))
-    fft = pd.DataFrame(data={"u": u,
-                             "real1": np.sin(2*np.pi/1000.0*fwidth*u)/(2*np.pi/1000.0*fwidth*u),
-                             "imag1": zeros,
-                             "real2": zeros,
-                             "imag2": -2.0*(np.sin(v)-v*np.cos(v))/(v*v),
-                             "real3": np.cos(v),
-                             "imag3": np.sin(v)})
-    fft["real1"] = fft["real1"].fillna(1.0)
-    fft["imag2"] = fft["imag2"].fillna(0.0)
+    if model == "top hat":
+        if part == "real":
+            fft = np.sin(2*np.pi/1000.0*fwidth*u)/(2*np.pi/1000.0*fwidth*u)
+            # i = np.where(np.isnan(fft))
+            fft[np.isnan(fft)] = 1.0
+        else:
+            fft = zeros
+    elif model == "ramp":
+        if part == "real":
+            fft = zeros
+        else:
+            fft = -2.0*(np.sin(v)-v*np.cos(v))/(v*v)
+            # i = np.where(np.isnan(fft))
+            fft[np.isnan(fft)] = 0.0
+    elif model == "delta":
+        if part == "real":
+            fft = np.cos(v)
+        else:
+            fft = np.sin(v)
     return fft
 
 t = np.linspace(-160, 160, 321)
@@ -65,56 +83,75 @@ N = len(t)
 u = np.linspace(-80, 80, 161)
 fwidth = 50
 
-data = get_data(t, fwidth)
-fft = get_fft(u, fwidth)
-
 st.set_page_config(layout="wide")
 st.title('Fourier transforms 1D')
-col1, col2 = st.columns(2)
 
-function = st.sidebar.selectbox("Select a function",
-                            ["top hat", "ramp", "delta"],
-                            index=0,)
-
-component = st.sidebar.selectbox("Select component",
-                             ["real", "imaginary"],
+model = st.sidebar.selectbox("Select a function",
+                             ["top hat", "ramp", "delta"],
                              index=0,)
 
-u = st.sidebar.slider('Select frequency', -80, 80, 5)
-data = get_cossin(data, u=u)
+part = st.sidebar.selectbox("Select component",
+                            ["real", "imaginary"],
+                            index=0,)
 
-data_dict = {"top hat": ["1", "cos1", "sin1", "real1", "imag1", "cos", "sin"],
-             "ramp":    ["2", "cos2", "sin2", "real2", "imag2", "cos", "sin"],
-             "delta":   ["3", "cos3", "sin3", "real3", "imag3", "cos", "sin"]}
+col1, col2 = st.columns(2)
 
-cols = data_dict[function]
-# pd.set_option('display.max_rows', 500)
+f = st.sidebar.slider('Select frequency', -80, 80, 5)
 
-ymin, ymax = (-1.1, 1.1)
-p1 = alt.Chart(data, title="f(t)").mark_line().encode(x="t:Q",
-                                                      y=alt.Y(cols[0], title="", scale=alt.Scale(domain=[ymin, ymax])))
-if component == "real":
-    p2 = alt.Chart(data, title="f(t)*cos(-2*pi*u*t)").mark_line().encode(x="t:Q",
-                   y=alt.Y(cols[1], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    p3 = alt.Chart(data, title="cos(-2*pi*u*t)").mark_line().encode(x="t:Q",
-                   y=alt.Y(cols[5], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    p4 = alt.Chart(fft, title="real part").mark_line().encode(x="u:Q",
-                   y=alt.Y(cols[3], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    rule = alt.Chart(fft).mark_rule().encode(x="u:Q").transform_filter(datum.u == u)
+if model == "top hat":
+    ft = top_hat(t, fwidth)
+elif model == "ramp":
+    ft = ramp(t, fwidth)
+elif model == "delta":
+    ft = delta(t, fwidth)
+
+if part == "real":
+    trig = get_cos(t, f)
+    ftrig = get_fcos(ft, t, f)
 else:
-    p2 = alt.Chart(data, title="f(t)*sin(-2*pi*u*t)").mark_line().encode(x="t:Q",
-                   y=alt.Y(cols[2], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    p3 = alt.Chart(data, title="sin(-2*pi*u*t)").mark_line().encode(x="t:Q",
-                   y=alt.Y(cols[6], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    p4 = alt.Chart(fft, title="imag part").mark_line().encode(x="u:Q",
-                   y=alt.Y(cols[4], title="", scale=alt.Scale(domain=[ymin, ymax])))
-    rule = alt.Chart(fft).mark_rule().encode(x="u:Q").transform_filter(datum.u == u)
+    trig = get_sin(t, f)
+    ftrig = get_fsin(ft, t, f)
 
-col1.altair_chart(p1, use_container_width=True)
-col1.altair_chart(p2, use_container_width=True)
-col2.altair_chart(p3, use_container_width=True)
-col2.altair_chart(p4+rule, use_container_width=True)
+fft = get_fft(model, part, u, fwidth)
+trig_label  = {"real":           "cos(-2\u03c0\u00b7u\u00b7t)", "imaginary":           "sin(-2\u03c0\u00b7u\u00b7t)"}
+ftrig_label = {"real": "f(t)\u00b7cos(-2\u03c0\u00b7u\u00b7t)", "imaginary": "f(t)\u00b7sin(-2\u03c0\u00b7u\u00b7t)"}
 
+fig1 = go.Figure()
+fig1.add_trace(go.Scatter(x=t, y=ft))
+fig1.update_layout(title='f(t)',
+                   xaxis_title='t',
+                   yaxis_title='',
+                   height=300,
+                   margin=dict(l=0, r=40, t=30, b=20))
+col1.plotly_chart(fig1, use_container_width=True)
+
+fig2 = go.Figure()
+fig2.add_trace(go.Scatter(x=t, y=trig))
+fig2.update_layout(title=trig_label[part],
+                   xaxis_title='t',
+                   yaxis_title='',
+                   height=300,
+                   margin=dict(l=0, r=40, t=30, b=20))
+col2.plotly_chart(fig2, use_container_width=True)
+
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(x=t, y=ftrig, fill='tozeroy'))
+fig3.update_layout(title=ftrig_label[part],
+                   xaxis_title='t',
+                   yaxis_title='',
+                   height=300,
+                   margin=dict(l=0, r=40, t=30, b=20))
+col1.plotly_chart(fig3, use_container_width=True)
+
+fig4 = go.Figure()
+fig4.add_trace(go.Scatter(x=u, y=fft))
+fig4.add_vline(x=f, line_width=1, line_color="green")
+fig4.update_layout(title=part + " part",
+                   xaxis_title='u',
+                   yaxis_title='',
+                   height=300,
+                   margin=dict(l=0, r=40, t=30, b=20))
+col2.plotly_chart(fig4, use_container_width=True)
 
 # hide_st_style = """
 #             <style>
@@ -124,14 +161,3 @@ col2.altair_chart(p4+rule, use_container_width=True)
 #             </style>
 #             """
 # st.markdown(hide_st_style, unsafe_allow_html=True)
-
-# import plotly.graph_objects as go
-#
-# fig = go.Figure()
-# fig.add_trace(go.Scatter(x=data["t"], y=data[cols[0]]))
-# fig.update_layout(title='f(t)',
-#                   xaxis_title='t',
-#                   yaxis_title='',
-#                   width=800, height=800,
-#                   margin=dict(l=40, r=40, b=40, t=40))
-# st.plotly_chart(fig)
