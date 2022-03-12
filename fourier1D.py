@@ -99,12 +99,11 @@ st.set_page_config(layout="wide")
 st.title("Fourier transforms 1D")
 
 model = st.sidebar.selectbox("Select a function", ["top hat", "ramp", "delta"], index=0)
-
 part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
+f = st.sidebar.slider("Select frequency", -80, 80, 5)
 
 col1, col2 = st.columns(2)
 
-f = st.sidebar.slider("Select frequency", -80, 80, 5)
 
 if model == "top hat":
     ft = top_hat(t, fwidth)
