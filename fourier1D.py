@@ -91,7 +91,6 @@ def get_fft(model, part, u, fwidth):
 
 
 t = np.linspace(-160, 160, 321)
-N = len(t)
 u = np.linspace(-80, 80, 161)
 fwidth = 50
 
@@ -103,7 +102,6 @@ part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
 f = st.sidebar.slider("Select frequency", -80, 80, 5)
 
 col1, col2 = st.columns(2)
-
 
 if model == "top hat":
     ft = top_hat(t, fwidth)
