@@ -162,23 +162,28 @@ ywidth = 50
 tilt = 0.0
 
 st.set_page_config(layout="wide")
-st.title("Fourier transforms")
+st.sidebar.title("Fourier transforms")
 
 dim = st.sidebar.selectbox("Select dimension", ["1D", "2D"], index=0)
 if dim == "1D":
-    model = st.sidebar.selectbox("Select function", ["top hat", "ramp", "delta"], index=0)
+    model = st.sidebar.selectbox(
+        "Select function", ["top hat", "ramp", "delta"], index=0
+    )
 else:
-    model = st.sidebar.selectbox("Select a function", ["circular", "rectangular"], index=0)
+    model = st.sidebar.selectbox(
+        "Select a function", ["circular", "rectangular"], index=0
+    )
 part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
-f1 = st.sidebar.slider("Select frequency", -80, 80, 5)
+f1 = st.sidebar.slider("Select u-frequency", -80, 80, 5)
 if dim == "2D":
     f2 = st.sidebar.slider("Select v-frequency", -80, 80, 5)
 
-xwidth = st.sidebar.slider("Select width", 0, 160, 50)
-
 if dim == "2D" and model == "rectangular":
-    ywidth = st.sidebar.slider("Select 2nd width", 0, 160, 50)
+    xwidth = st.sidebar.slider("Select x-width", 0, 160, 50)
+    ywidth = st.sidebar.slider("Select y-width", 0, 160, 50)
     tilt = st.sidebar.slider("rotate rectangle", 0, 180, 0)
+else:
+    xwidth = st.sidebar.slider("Select width", 0, 160, 50)
 
 col1, col2 = st.columns(2)
 
@@ -244,7 +249,7 @@ if dim == "1D":
     fig4.add_trace(go.Scatter(x=u, y=fft))
     fig4.add_vline(x=f1, line_width=1, line_color="green")
     fig4.update_layout(
-        title=part + " part",
+        title=part + " part of fft",
         xaxis_title="u",
         yaxis_title="",
         height=300,
@@ -259,6 +264,14 @@ else:
         ft = rectangular(t, xwidth, ywidth, tilt)
 
     fft = get_fft2D(model, xwidth, ywidth, tilt)
+    trig_label = {
+        "real": "cos(2\u03c0\u00b7(u\u00b7x-v\u00b7y))",
+        "imaginary": "sin(2\u03c0\u00b7(u\u00b7x-v\u00b7y))",
+    }
+    ftrig_label = {
+        "real": "f(x,y)\u00b7cos(2\u03c0\u00b7(u\u00b7x-v\u00b7y))",
+        "imaginary": "f(x,y)\u00b7sin(2\u03c0\u00b7(u\u00b7x-v\u00b7y))",
+    }
 
     if part == "real":
         trig = get_cos2D(t, f1, f2)
@@ -270,15 +283,15 @@ else:
         fftpart = np.imag(fft)
 
     fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])
-    fig1.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
+    fig1.update_layout(title="f(x,y)", margin=dict(l=0, r=40, t=30, b=20))
     col1.plotly_chart(fig1, use_container_width=True)
 
     fig2 = go.Figure(data=[go.Surface(z=trig, x=t, y=t, showscale=False)])
-    fig2.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
+    fig2.update_layout(title=trig_label[part], margin=dict(l=0, r=40, t=30, b=20))
     col2.plotly_chart(fig2, use_container_width=True)
 
     fig3 = go.Figure(data=[go.Surface(z=ftrig, x=t, y=t, showscale=False)])
-    fig3.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
+    fig3.update_layout(title=ftrig_label[part], margin=dict(l=0, r=40, t=30, b=20))
     col1.plotly_chart(fig3, use_container_width=True)
 
     fig4 = go.Figure(data=[go.Surface(z=fftpart, x=u, y=u, showscale=False)])
@@ -289,7 +302,7 @@ else:
     )
     fig4.update_traces(marker_size=5, selector=dict(type="scatter3d"))
     fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))
-    fig4.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
+    fig4.update_layout(title=part + " part of fft", margin=dict(l=0, r=40, t=30, b=20))
     col2.plotly_chart(fig4, use_container_width=True)
 
 # hide_st_style = """
