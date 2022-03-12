@@ -29,7 +29,7 @@ def rectangular(t, xwidth=50, ywidth=50, tilt=0.0):
 
 
 @st.cache(suppress_st_warning=True)
-def get_cos(t, u, v):
+def get_cos2D(t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.cos(2 * np.pi * (u * X - v * Y) / N)
@@ -37,7 +37,7 @@ def get_cos(t, u, v):
 
 
 @st.cache(suppress_st_warning=True)
-def get_sin(t, u, v):
+def get_sin2D(t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.sin(2 * np.pi * (u * X - v * Y) / N)
@@ -45,23 +45,23 @@ def get_sin(t, u, v):
 
 
 @st.cache(suppress_st_warning=True)
-def get_fcos(ft, t, u, v):
+def get_fcos2D(ft, t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
-    Z = ft * get_cos(t, u, v)
+    Z = ft * get_cos2D(t, u, v)
     return Z
 
 
 @st.cache(suppress_st_warning=True)
-def get_fsin(ft, t, u, v):
+def get_fsin2D(ft, t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
-    Z = ft * get_sin(t, u, v)
+    Z = ft * get_sin2D(t, u, v)
     return Z
 
 
 @st.cache(suppress_st_warning=True)
-def get_fft(model, xwidth, ywidth, tilt):
+def get_fft2D(model, xwidth, ywidth, tilt):
     if model == "circular":
         ft = circular(t, xwidth)
     else:
@@ -96,15 +96,15 @@ if model == "circular":
 else:
     ft = rectangular(t, xwidth, ywidth, tilt)
 
-fft = get_fft(model, xwidth, ywidth, tilt)
+fft = get_fft2D(model, xwidth, ywidth, tilt)
 
 if part == "real":
-    trig = get_cos(t, f1, f2)
-    ftrig = get_fcos(ft, t, f1, f2)
+    trig = get_cos2D(t, f1, f2)
+    ftrig = get_fcos2D(ft, t, f1, f2)
     fftpart = np.real(fft)
 else:
-    trig = get_sin(t, f1, f2)
-    ftrig = get_fsin(ft, t, f1, f2)
+    trig = get_sin2D(t, f1, f2)
+    ftrig = get_fsin2D(ft, t, f1, f2)
     fftpart = np.imag(fft)
 
 fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])

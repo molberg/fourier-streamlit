@@ -33,37 +33,37 @@ def delta(t, fwidth):
 
 
 @st.cache(suppress_st_warning=True)
-def get_cos(t, f):
+def get_cos1D(t, f):
     y = np.cos(2 * np.pi * f / 1000.0 * t)
     return y
 
 
 @st.cache(suppress_st_warning=True)
-def get_sin(t, f):
+def get_sin1D(t, f):
     y = -np.sin(2 * np.pi * f / 1000.0 * t)
     return y
 
 
 @st.cache(suppress_st_warning=True)
-def get_sin(t, f):
+def get_sin1D(t, f):
     y = -np.sin(2 * np.pi * f / 1000.0 * t)
     return y
 
 
 @st.cache(suppress_st_warning=True)
-def get_fcos(ft, t, f):
-    fy = ft * get_cos(t, f)
+def get_fcos1D(ft, t, f):
+    fy = ft * get_cos1D(t, f)
     return fy
 
 
 @st.cache(suppress_st_warning=True)
-def get_fsin(ft, t, f):
-    fy = ft * get_sin(t, f)
+def get_fsin1D(ft, t, f):
+    fy = ft * get_sin1D(t, f)
     return fy
 
 
 @st.cache(suppress_st_warning=True)
-def get_fft(model, part, u, fwidth):
+def get_fft1D(model, part, u, fwidth):
     v = 2.0 * np.pi / 1000.0 * fwidth * u
     zeros = np.zeros(len(u))
     if model == "top hat":
@@ -111,13 +111,13 @@ elif model == "delta":
     ft = delta(t, fwidth)
 
 if part == "real":
-    trig = get_cos(t, f)
-    ftrig = get_fcos(ft, t, f)
+    trig = get_cos1D(t, f)
+    ftrig = get_fcos1D(ft, t, f)
 else:
-    trig = get_sin(t, f)
-    ftrig = get_fsin(ft, t, f)
+    trig = get_sin1D(t, f)
+    ftrig = get_fsin1D(ft, t, f)
 
-fft = get_fft(model, part, u, fwidth)
+fft = get_fft1D(model, part, u, fwidth)
 trig_label = {
     "real": "cos(-2\u03c0\u00b7u\u00b7t)",
     "imaginary": "sin(-2\u03c0\u00b7u\u00b7t)",
