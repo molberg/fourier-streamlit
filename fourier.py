@@ -68,12 +68,6 @@ def get_sin1D(t, f):
 
 
 @st.cache(suppress_st_warning=True)
-def get_sin1D(t, f):
-    y = -np.sin(2 * np.pi * f * t)
-    return y
-
-
-@st.cache(suppress_st_warning=True)
 def get_fcos1D(ft, t, f):
     fy = ft * get_cos1D(t, f)
     return fy
@@ -87,7 +81,6 @@ def get_fsin1D(ft, t, f):
 
 @st.cache(suppress_st_warning=True)
 def get_cos2D(t, u, v):
-    N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.cos(-2 * np.pi * (u * X + v * Y))
     return Z
@@ -95,7 +88,6 @@ def get_cos2D(t, u, v):
 
 @st.cache(suppress_st_warning=True)
 def get_sin2D(t, u, v):
-    N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.sin(-2 * np.pi * (u * X + v * Y))
     return Z
@@ -103,7 +95,6 @@ def get_sin2D(t, u, v):
 
 @st.cache(suppress_st_warning=True)
 def get_fcos2D(ft, t, u, v):
-    N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = ft * get_cos2D(t, u, v)
     return Z
@@ -111,7 +102,6 @@ def get_fcos2D(ft, t, u, v):
 
 @st.cache(suppress_st_warning=True)
 def get_fsin2D(ft, t, u, v):
-    N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = ft * get_sin2D(t, u, v)
     return Z
@@ -283,26 +273,38 @@ else:
         fftpart = np.zeros(fft.shape)
 
     fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])
-    fig1.update_layout(title="f(x,y)", margin=dict(l=0, r=40, t=30, b=20))
+    fig1.update_layout(
+        title="f(x,y)",
+        margin=dict(l=0, r=40, t=30, b=20)
+    )
     col1.plotly_chart(fig1, use_container_width=True)
 
     fig2 = go.Figure(data=[go.Surface(z=trig, x=t, y=t, showscale=False)])
-    fig2.update_layout(title=trig_label[part], margin=dict(l=0, r=40, t=30, b=20))
+    fig2.update_layout(
+        title=trig_label[part],
+        margin=dict(l=0, r=40, t=30, b=20)
+    )
     col2.plotly_chart(fig2, use_container_width=True)
 
     fig3 = go.Figure(data=[go.Surface(z=ftrig, x=t, y=t, showscale=False)])
-    fig3.update_layout(title=ftrig_label[part], margin=dict(l=0, r=40, t=30, b=20))
+    fig3.update_layout(
+        title=ftrig_label[part],
+        margin=dict(l=0, r=40, t=30, b=20)
+    )
     col1.plotly_chart(fig3, use_container_width=True)
 
     fig4 = go.Figure(data=[go.Surface(z=fftpart, x=u, y=u, showscale=False)])
-    i = np.abs(u - f1).argmin()
-    j = np.abs(u - f2).argmin()
+    # i = np.abs(u - f1).argmin()
+    # j = np.abs(u - f2).argmin()
     fig4.add_trace(
-        go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[-fftpart[i, j], fftpart[i, j]], mode="markers")
+        go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[0.5*np.min(fftpart), 0.5*np.max(fftpart)], mode="lines")
     )
     fig4.update_traces(marker_size=5, selector=dict(type="scatter3d"))
     fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))
-    fig4.update_layout(title=part + " part of fft", margin=dict(l=0, r=40, t=30, b=20))
+    fig4.update_layout(
+        title=part + " part of fft",
+        margin=dict(l=0, r=40, t=30, b=20)
+    )
     col2.plotly_chart(fig4, use_container_width=True)
 
 # hide_st_style = """
