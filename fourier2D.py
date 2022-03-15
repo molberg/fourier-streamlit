@@ -6,7 +6,7 @@ np.seterr(divide="ignore", invalid="ignore")
 
 
 @st.cache(suppress_st_warning=True)
-def circular(t, fwidth=50):
+def circular(t, fwidth=0.5):
     N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.zeros((N, N))
@@ -16,7 +16,7 @@ def circular(t, fwidth=50):
 
 
 @st.cache(suppress_st_warning=True)
-def rectangular(t, xwidth=50, ywidth=50, tilt=0.0):
+def rectangular(t, xwidth=0.5, ywidth=0.5, tilt=0.0):
     N = len(t)
     X, Y = np.meshgrid(t, t)
     Z = np.zeros((N, N))
@@ -32,7 +32,7 @@ def rectangular(t, xwidth=50, ywidth=50, tilt=0.0):
 def get_cos2D(t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
-    Z = np.cos(2 * np.pi * (u * X - v * Y) / N)
+    Z = np.cos(-2 * np.pi * (u * X + v * Y))
     return Z
 
 
@@ -40,7 +40,7 @@ def get_cos2D(t, u, v):
 def get_sin2D(t, u, v):
     N = len(t)
     X, Y = np.meshgrid(t, t)
-    Z = np.sin(2 * np.pi * (u * X - v * Y) / N)
+    Z = np.sin(-2 * np.pi * (u * X + v * Y))
     return Z
 
 
@@ -67,13 +67,14 @@ def get_fft2D(model, xwidth, ywidth, tilt):
     else:
         ft = rectangular(t, xwidth, ywidth, tilt)
     Z = np.fft.fftshift(np.fft.fft2(ft))
-    return Z[80:241, 80:241]
+    return Z
 
 
-t = np.linspace(-160, 160, 321)
-u = np.linspace(-80, 80, 161)
-xwidth = 50
-ywidth = 50
+# t is spatial dimension in mm
+t = np.linspace(-1.6, 1.6-0.0125, 256)
+u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125))
+xwidth = 0.5
+ywidth = 0.5
 tilt = 0.0
 
 st.set_page_config(layout="wide")
@@ -81,13 +82,15 @@ st.title("Fourier transforms 2D")
 
 model = st.sidebar.selectbox("Select a function", ["circular", "rectangular"], index=0)
 part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
-f1 = st.sidebar.slider("Select u-frequency", -80, 80, 5)
-f2 = st.sidebar.slider("Select v-frequency", -80, 80, 5)
-xwidth = st.sidebar.slider("Select width", 0, 160, 50)
+f1 = st.sidebar.slider("Select u-frequency", -5.0, 5.0, value=1.0, step=0.25)
+f2 = st.sidebar.slider("Select v-frequency", -5.0, 5.0, value=1.0, step=0.25)
 
 if model == "rectangular":
-    ywidth = st.sidebar.slider("Select 2nd width", 0, 160, 50)
+    xwidth = st.sidebar.slider("Select x-width", 0.0, 2.0, value=0.5, step=0.1)
+    ywidth = st.sidebar.slider("Select y-width", 0.0, 2.0, value=0.5, step=0.1)
     tilt = st.sidebar.slider("rotate rectangle", 0, 180, 0)
+else:
+    xwidth = st.sidebar.slider("Select width", 0.0, 2.0, value=0.5, step=0.1)
 
 col1, col2 = st.columns(2)
 
@@ -105,7 +108,7 @@ if part == "real":
 else:
     trig = get_sin2D(t, f1, f2)
     ftrig = get_fsin2D(ft, t, f1, f2)
-    fftpart = np.imag(fft)
+    fftpart = np.zeros(fft.shape)
 
 fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])
 fig1.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
@@ -120,10 +123,10 @@ fig3.update_layout(title="", margin=dict(l=40, r=40, b=40, t=40))
 col1.plotly_chart(fig3, use_container_width=True)
 
 fig4 = go.Figure(data=[go.Surface(z=fftpart, x=u, y=u, showscale=False)])
-i = np.where(u == f1)
-j = np.where(u == f2)
+i = np.abs(u - f1).argmin()
+j = np.abs(u - f2).argmin()
 fig4.add_trace(
-    go.Scatter3d(x=[f1], y=[f2], z=[fftpart[80 + f1, 80 + f2]], mode="markers")
+    go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[-fftpart[i, j], fftpart[i, j]], mode="markers")
 )
 fig4.update_traces(marker_size=5, selector=dict(type="scatter3d"))
 fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))

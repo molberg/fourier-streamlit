@@ -34,19 +34,19 @@ def delta(t, fwidth):
 
 @st.cache(suppress_st_warning=True)
 def get_cos1D(t, f):
-    y = np.cos(2 * np.pi * f / 1000.0 * t)
+    y = np.cos(2 * np.pi * f * t)
     return y
 
 
 @st.cache(suppress_st_warning=True)
 def get_sin1D(t, f):
-    y = -np.sin(2 * np.pi * f / 1000.0 * t)
+    y = -np.sin(2 * np.pi * f * t)
     return y
 
 
 @st.cache(suppress_st_warning=True)
 def get_sin1D(t, f):
-    y = -np.sin(2 * np.pi * f / 1000.0 * t)
+    y = -np.sin(2 * np.pi * f * t)
     return y
 
 
@@ -64,14 +64,13 @@ def get_fsin1D(ft, t, f):
 
 @st.cache(suppress_st_warning=True)
 def get_fft1D(model, part, u, fwidth):
-    v = 2.0 * np.pi / 1000.0 * fwidth * u
+    v = 2.0 * np.pi * fwidth * u
     zeros = np.zeros(len(u))
     if model == "top hat":
         if part == "real":
-            fft = np.sin(2 * np.pi / 1000.0 * fwidth * u) / (
-                2 * np.pi / 1000.0 * fwidth * u
+            fft = np.sin(2 * np.pi * fwidth * u) / (
+                2 * np.pi * fwidth * u
             )
-            # i = np.where(np.isnan(fft))
             fft[np.isnan(fft)] = 1.0
         else:
             fft = zeros
@@ -89,17 +88,18 @@ def get_fft1D(model, part, u, fwidth):
             fft = np.sin(v)
     return fft
 
-
-t = np.linspace(-160, 160, 321)
-u = np.linspace(-80, 80, 161)
-fwidth = 50
+# t is spatial dimension in mm
+t = np.linspace(-1.6, 1.6-0.0125, 256)
+u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125))
+fwidth = 0.5
 
 st.set_page_config(layout="wide")
 st.title("Fourier transforms 1D")
 
 model = st.sidebar.selectbox("Select a function", ["top hat", "ramp", "delta"], index=0)
 part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
-f = st.sidebar.slider("Select frequency", -80, 80, 5)
+f = st.sidebar.slider("Select u-frequency", -5.0, 5.0, value=1.0, step=0.25)
+# f = nf*0.03125
 
 col1, col2 = st.columns(2)
 
@@ -119,19 +119,19 @@ else:
 
 fft = get_fft1D(model, part, u, fwidth)
 trig_label = {
-    "real": "cos(-2\u03c0\u00b7u\u00b7t)",
-    "imaginary": "sin(-2\u03c0\u00b7u\u00b7t)",
+    "real": "cos(-2\u03c0\u00b7u\u00b7x)",
+    "imaginary": "sin(-2\u03c0\u00b7u\u00b7x)",
 }
 ftrig_label = {
-    "real": "f(t)\u00b7cos(-2\u03c0\u00b7u\u00b7t)",
-    "imaginary": "f(t)\u00b7sin(-2\u03c0\u00b7u\u00b7t)",
+    "real": "f(x)\u00b7cos(-2\u03c0\u00b7u\u00b7x)",
+    "imaginary": "f(x)\u00b7sin(-2\u03c0\u00b7u\u00b7x)",
 }
 
 fig1 = go.Figure()
 fig1.add_trace(go.Scatter(x=t, y=ft))
 fig1.update_layout(
-    title="f(t)",
-    xaxis_title="t",
+    title="f(x)",
+    xaxis_title="x [cm]",
     yaxis_title="",
     height=300,
     margin=dict(l=0, r=40, t=30, b=20),
@@ -142,7 +142,7 @@ fig2 = go.Figure()
 fig2.add_trace(go.Scatter(x=t, y=trig))
 fig2.update_layout(
     title=trig_label[part],
-    xaxis_title="t",
+    xaxis_title="x [cm]",
     yaxis_title="",
     height=300,
     margin=dict(l=0, r=40, t=30, b=20),
@@ -153,7 +153,7 @@ fig3 = go.Figure()
 fig3.add_trace(go.Scatter(x=t, y=ftrig, fill="tozeroy"))
 fig3.update_layout(
     title=ftrig_label[part],
-    xaxis_title="t",
+    xaxis_title="x [cm]",
     yaxis_title="",
     height=300,
     margin=dict(l=0, r=40, t=30, b=20),
@@ -165,7 +165,7 @@ fig4.add_trace(go.Scatter(x=u, y=fft))
 fig4.add_vline(x=f, line_width=1, line_color="green")
 fig4.update_layout(
     title=part + " part",
-    xaxis_title="u",
+    xaxis_title="u [cycles/cm]",
     yaxis_title="",
     height=300,
     margin=dict(l=0, r=40, t=30, b=20),
