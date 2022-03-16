@@ -1,6 +1,7 @@
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
+from scipy.special import jn
 
 np.seterr(divide="ignore", invalid="ignore")
 
@@ -113,9 +114,8 @@ def get_fft1D(model, part, u, fwidth):
     zeros = np.zeros(len(u))
     if model == "top hat":
         if part == "real":
-            fft = np.sin(2 * np.pi * fwidth * u) / (
-                2 * np.pi * fwidth * u
-            )
+            r = 2 * np.pi * fwidth * u
+            fft = np.sin(r) / r
             fft[np.isnan(fft)] = 1.0
         else:
             fft = zeros
@@ -135,20 +135,38 @@ def get_fft1D(model, part, u, fwidth):
 
 
 @st.cache(suppress_st_warning=True)
-def get_fft2D(model, xwidth, ywidth, tilt):
+def get_fft2D(model, part, u, xwidth, ywidth, tilt):
+    Z = np.zeros((u.size, u.size))
     if model == "circular":
-        ft = circular(t, xwidth)
+        if part == "real":
+            rho = u*xwidth
+            U, V = np.meshgrid(u, u)
+            RHO = 2*xwidth*np.pi*np.sqrt(U*U + V*V)
+            # ft = circular(t, xwidth)
+            Z = 2*np.pi*xwidth*xwidth*jn(1, RHO)/RHO
+            Z[np.isnan(Z)] = np.pi*xwidth*xwidth
     else:
-        ft = rectangular(t, xwidth, ywidth, tilt)
-    Z = np.fft.fftshift(np.fft.fft2(ft))
+        if part == "real":
+            U, V = np.meshgrid(u, u)
+            rad = tilt * np.pi / 180.0
+            xr =  U*np.cos(rad) + V*np.sin(rad)
+            yr = -U*np.sin(rad) + V*np.cos(rad)
+            r1 = 2*xwidth*np.pi*xr
+            r2 = 2*ywidth*np.pi*yr
+            Z1 = np.sin(r1)/r1
+            Z1[np.isnan(Z1)] = 1.0
+            Z2 = np.sin(r2)/r2
+            Z2[np.isnan(Z2)] = 1.0
+            Z = Z1*Z2
     return Z
 
 
 # t is spatial dimension in mm
 t = np.linspace(-1.6, 1.6-0.0125, 256)
-u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125))
-xwidth = 0.5
-ywidth = 0.5
+u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125*8))
+# v = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125))
+xwidth = 1.0
+ywidth = 1.0
 tilt = 0.0
 
 st.set_page_config(layout="wide")
@@ -161,7 +179,7 @@ if dim == "1D":
     )
 else:
     model = st.sidebar.selectbox(
-        "Select a function", ["circular", "rectangular"], index=0
+        "Select a function", ["rectangular", "circular"], index=0
     )
 part = st.sidebar.selectbox("Select component", ["real", "imaginary"], index=0)
 f1 = st.sidebar.slider("Select u-frequency", -5.0, 5.0, value=1.0, step=0.25)
@@ -169,21 +187,21 @@ if dim == "2D":
     f2 = st.sidebar.slider("Select v-frequency", -5.0, 5.0, value=1.0, step=0.25)
 
 if model == "rectangular":
-    xwidth = st.sidebar.slider("Select x-width", 0.0, 2.0, value=0.5, step=0.1)
-    ywidth = st.sidebar.slider("Select y-width", 0.0, 2.0, value=0.5, step=0.1)
+    xwidth = st.sidebar.slider("Select x-width", 0.0, 3.0, value=1.0, step=0.1)
+    ywidth = st.sidebar.slider("Select y-width", 0.0, 3.0, value=1.0, step=0.1)
     tilt = st.sidebar.slider("rotate rectangle", 0, 180, value=0)
 else:
-    xwidth = st.sidebar.slider("Select width", 0.0, 2.0, value=0.5, step=0.1)
+    xwidth = st.sidebar.slider("Select width", 0.0, 3.0, value=1.0, step=0.1)
 
 col1, col2 = st.columns(2)
 
 if dim == "1D":
     if model == "top hat":
-        ft = top_hat(t, xwidth)
+        ft = top_hat(t, xwidth/2)
     elif model == "ramp":
-        ft = ramp(t, xwidth)
+        ft = ramp(t, xwidth/2)
     elif model == "delta":
-        ft = delta(t, xwidth)
+        ft = delta(t, xwidth/2)
 
     if part == "real":
         trig = get_cos1D(t, f1)
@@ -192,21 +210,21 @@ if dim == "1D":
         trig = get_sin1D(t, f1)
         ftrig = get_fsin1D(ft, t, f1)
 
-    fft = get_fft1D(model, part, u, xwidth)
+    fft = get_fft1D(model, part, u, xwidth/2)
     trig_label = {
-        "real": "cos(-2\u03c0\u00b7u\u00b7x)",
-        "imaginary": "sin(-2\u03c0\u00b7u\u00b7x)",
+        "real": "cos(-2\u03c0\u00b7u\u00b7t)",
+        "imaginary": "sin(-2\u03c0\u00b7u\u00b7t)",
     }
     ftrig_label = {
-        "real": "f(x)\u00b7cos(-2\u03c0\u00b7u\u00b7x)",
-        "imaginary": "f(x)\u00b7sin(-2\u03c0\u00b7u\u00b7x)",
+        "real": "f(t)\u00b7cos(-2\u03c0\u00b7u\u00b7t)",
+        "imaginary": "f(t)\u00b7sin(-2\u03c0\u00b7u\u00b7t)",
     }
 
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(x=t, y=ft))
     fig1.update_layout(
-        title="f(x)",
-        xaxis_title="x [cm]",
+        title="f(t)",
+        xaxis_title="t [sec]",
         yaxis_title="",
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
@@ -217,7 +235,7 @@ if dim == "1D":
     fig2.add_trace(go.Scatter(x=t, y=trig))
     fig2.update_layout(
         title=trig_label[part],
-        xaxis_title="x [cm]",
+        xaxis_title="t [sec]",
         yaxis_title="",
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
@@ -228,7 +246,7 @@ if dim == "1D":
     fig3.add_trace(go.Scatter(x=t, y=ftrig, fill="tozeroy"))
     fig3.update_layout(
         title=ftrig_label[part],
-        xaxis_title="x [cm]",
+        xaxis_title="t [sec]",
         yaxis_title="",
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
@@ -240,20 +258,21 @@ if dim == "1D":
     fig4.add_vline(x=f1, line_width=1, line_color="green")
     fig4.update_layout(
         title=part + " part of fft",
-        xaxis_title="u [cycles/cm]",
+        xaxis_title="u [Hz]",
         yaxis_title="",
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
     )
+    # fig4.update_xaxes(range=[-6.0, 6.0], fixedrange=True)
     col2.plotly_chart(fig4, use_container_width=True)
 
 else:
     if model == "circular":
-        ft = circular(t, xwidth)
+        ft = circular(t, xwidth/2)
     else:
-        ft = rectangular(t, xwidth, ywidth, tilt)
+        ft = rectangular(t, xwidth/2, ywidth/2, tilt)
 
-    fft = get_fft2D(model, xwidth, ywidth, tilt)
+    fft = get_fft2D(model, part, u, xwidth/2, ywidth/2, tilt)
     trig_label = {
         "real": "cos(-2\u03c0\u00b7(u\u00b7x+v\u00b7y))",
         "imaginary": "sin(-2\u03c0\u00b7(u\u00b7x+v\u00b7y))",
@@ -266,11 +285,9 @@ else:
     if part == "real":
         trig = get_cos2D(t, f1, f2)
         ftrig = get_fcos2D(ft, t, f1, f2)
-        fftpart = np.real(fft)
     else:
         trig = get_sin2D(t, f1, f2)
         ftrig = get_fsin2D(ft, t, f1, f2)
-        fftpart = np.zeros(fft.shape)
 
     fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])
     fig1.update_layout(
@@ -293,17 +310,22 @@ else:
     )
     col1.plotly_chart(fig3, use_container_width=True)
 
-    fig4 = go.Figure(data=[go.Surface(z=fftpart, x=u, y=u, showscale=False)])
+    fig4 = go.Figure(data=[go.Surface(z=fft, x=u, y=u, showscale=False)])
     # i = np.abs(u - f1).argmin()
     # j = np.abs(u - f2).argmin()
+    print(f1, f2, np.min(fft), np.max(fft))
     fig4.add_trace(
-        go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[0.5*np.min(fftpart), 0.5*np.max(fftpart)], mode="lines")
+        go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[np.min(fft), 0.5*np.max(fft)], mode="lines")
     )
     fig4.update_traces(marker_size=5, selector=dict(type="scatter3d"))
     fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))
     fig4.update_layout(
         title=part + " part of fft",
-        margin=dict(l=0, r=40, t=30, b=20)
+        margin=dict(l=0, r=40, t=30, b=20),
+        scene = dict(
+            xaxis = dict(nticks=4, range=[-5, 5],),
+            yaxis = dict(nticks=4, range=[-5, 5],),
+        ),
     )
     col2.plotly_chart(fig4, use_container_width=True)
 
