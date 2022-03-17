@@ -2,6 +2,7 @@ import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 from scipy.special import jn
+from scipy import interpolate
 
 np.seterr(divide="ignore", invalid="ignore")
 
@@ -28,7 +29,7 @@ def ramp(t, fwidth):
 def delta(t, fwidth):
     N = len(t)
     y = np.zeros(N)
-    i = np.where(t == float(fwidth))
+    i = np.abs(t - fwidth).argmin()
     y[i] = 1.0
     return y
 
@@ -129,7 +130,7 @@ def get_fft1D(model, part, u, fwidth):
         if part == "real":
             fft = np.cos(v)
         else:
-            fft = np.sin(v)
+            fft = -np.sin(v)
     return fft
 
 
@@ -189,7 +190,10 @@ if model == "rectangular":
     ywidth = st.sidebar.slider("Select y-width", 0.0, 3.0, value=1.0, step=0.1)
     tilt = st.sidebar.slider("rotate rectangle", 0, 180, value=0)
 else:
-    xwidth = st.sidebar.slider("Select width", 0.0, 3.0, value=1.0, step=0.1)
+    if model == "delta":
+        xwidth = st.sidebar.slider("Select position", -1.5, 1.5, value=1.0, step=0.1)
+    else:
+        xwidth = st.sidebar.slider("Select width", 0.0, 3.0, value=1.0, step=0.1)
 
 col1, col2 = st.columns(2)
 
@@ -199,7 +203,7 @@ if dim == "1D":
     elif model == "ramp":
         ft = ramp(t, xwidth/2)
     elif model == "delta":
-        ft = delta(t, xwidth/2)
+        ft = delta(t, xwidth)
 
     if part == "real":
         trig = get_cos1D(t, f1)
@@ -255,7 +259,7 @@ if dim == "1D":
     fig4.add_trace(go.Scatter(x=u, y=fft))
     fig4.add_vline(x=f1, line_width=1, line_color="green")
     fig4.update_layout(
-        title=part + " part of fft",
+        title=part + " part of FT",
         xaxis_title="u [Hz]",
         yaxis_title="",
         height=300,
@@ -315,15 +319,16 @@ else:
     col1.plotly_chart(fig3, use_container_width=True)
 
     fig4 = go.Figure(data=[go.Surface(z=fft, x=u, y=u, showscale=False)])
-    # i = np.abs(u - f1).argmin()
-    # j = np.abs(u - f2).argmin()
-    fig4.add_trace(
-        go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[np.min(fft), 0.5*np.max(fft)], mode="lines")
-    )
+    f = interpolate.interp2d(u, u, fft, kind='cubic')
+    z = np.round(f(f1, f2), 1)
+    fig4.add_trace(go.Scatter3d(x=[f1], y=[f2], z=z, mode="markers",))
+    fig4.update_traces(hovertemplate="u: %{x:.2f}" +
+                    "<br>v: %{y:.2f}" +
+                    "<br>FT: %{z:.2f}")
     fig4.update_traces(marker_size=5, selector=dict(type="scatter3d"))
     fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))
     fig4.update_layout(
-        title=part + " part of fft",
+        title=part + " part of FT",
         margin=dict(l=0, r=0, t=30, b=30, pad=0),
         scene=dict(xaxis=dict(title="u"), yaxis=dict(title="v"), zaxis=dict(title=""),
             aspectratio=dict(x=1.2, y=1.2, z=1)),
