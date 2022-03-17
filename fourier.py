@@ -124,7 +124,6 @@ def get_fft1D(model, part, u, fwidth):
             fft = zeros
         else:
             fft = -2.0 * (np.sin(v) - v * np.cos(v)) / (v * v)
-            # i = np.where(np.isnan(fft))
             fft[np.isnan(fft)] = 0.0
     elif model == "delta":
         if part == "real":
@@ -142,7 +141,6 @@ def get_fft2D(model, part, u, xwidth, ywidth, tilt):
             rho = u*xwidth
             U, V = np.meshgrid(u, u)
             RHO = 2*xwidth*np.pi*np.sqrt(U*U + V*V)
-            # ft = circular(t, xwidth)
             Z = 2*np.pi*xwidth*xwidth*jn(1, RHO)/RHO
             Z[np.isnan(Z)] = np.pi*xwidth*xwidth
     else:
@@ -292,28 +290,33 @@ else:
     fig1 = go.Figure(data=[go.Surface(z=ft, x=t, y=t, showscale=False)])
     fig1.update_layout(
         title="f(x,y)",
-        margin=dict(l=0, r=40, t=30, b=20)
-    )
+        margin=dict(l=0, r=0, t=30, b=30, pad=0),
+        scene=dict(xaxis=dict(title="x"), yaxis=dict(title="y"), zaxis=dict(title=""),
+            aspectratio=dict(x=1.2, y=1.2, z=1)),
+        )
     col1.plotly_chart(fig1, use_container_width=True)
 
     fig2 = go.Figure(data=[go.Surface(z=trig, x=t, y=t, showscale=False)])
     fig2.update_layout(
         title=trig_label[part],
-        margin=dict(l=0, r=40, t=30, b=20)
+        margin=dict(l=0, r=0, t=30, b=30, pad=0),
+        scene=dict(xaxis=dict(title="x"), yaxis=dict(title="y"), zaxis=dict(title=""),
+            aspectratio=dict(x=1.2, y=1.2, z=1)),
     )
     col2.plotly_chart(fig2, use_container_width=True)
 
     fig3 = go.Figure(data=[go.Surface(z=ftrig, x=t, y=t, showscale=False)])
     fig3.update_layout(
         title=ftrig_label[part],
-        margin=dict(l=0, r=40, t=30, b=20)
+        margin=dict(l=0, r=0, t=30, b=30, pad=0),
+        scene=dict(xaxis=dict(title="x"), yaxis=dict(title="y"), zaxis=dict(title=""),
+            aspectratio=dict(x=1.2, y=1.2, z=1)),
     )
     col1.plotly_chart(fig3, use_container_width=True)
 
     fig4 = go.Figure(data=[go.Surface(z=fft, x=u, y=u, showscale=False)])
     # i = np.abs(u - f1).argmin()
     # j = np.abs(u - f2).argmin()
-    print(f1, f2, np.min(fft), np.max(fft))
     fig4.add_trace(
         go.Scatter3d(x=[f1, f1], y=[f2, f2], z=[np.min(fft), 0.5*np.max(fft)], mode="lines")
     )
@@ -321,11 +324,9 @@ else:
     fig4.update_traces(marker_color="green", selector=dict(type="scatter3d"))
     fig4.update_layout(
         title=part + " part of fft",
-        margin=dict(l=0, r=40, t=30, b=20),
-        scene = dict(
-            xaxis = dict(nticks=4, range=[-5, 5],),
-            yaxis = dict(nticks=4, range=[-5, 5],),
-        ),
+        margin=dict(l=0, r=0, t=30, b=30, pad=0),
+        scene=dict(xaxis=dict(title="u"), yaxis=dict(title="v"), zaxis=dict(title=""),
+            aspectratio=dict(x=1.2, y=1.2, z=1)),
     )
     col2.plotly_chart(fig4, use_container_width=True)
 
