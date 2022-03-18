@@ -111,12 +111,11 @@ def get_fsin2D(ft, t, u, v):
 
 @st.cache(suppress_st_warning=True)
 def get_fft1D(model, part, u, fwidth):
-    v = 2.0 * np.pi * fwidth * u
+    v = 2 * np.pi * fwidth * u
     zeros = np.zeros(len(u))
     if model == "top hat":
         if part == "real":
-            r = 2 * np.pi * fwidth * u
-            fft = np.sin(r) / r
+            fft = np.sin(v) / v
             fft[np.isnan(fft)] = 1.0
         else:
             fft = zeros
@@ -128,9 +127,9 @@ def get_fft1D(model, part, u, fwidth):
             fft[np.isnan(fft)] = 0.0
     elif model == "delta":
         if part == "real":
-            fft = np.cos(v)
+            fft = np.cos(2*v)
         else:
-            fft = -np.sin(v)
+            fft = -np.sin(2*v)
     return fft
 
 
@@ -163,7 +162,6 @@ def get_fft2D(model, part, u, xwidth, ywidth, tilt):
 # t is spatial dimension in mm
 t = np.linspace(-1.6, 1.6-0.0125, 256)
 u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125*8))
-# v = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125))
 xwidth = 1.0
 ywidth = 1.0
 tilt = 0.0
