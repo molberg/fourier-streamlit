@@ -157,7 +157,7 @@ def get_fft2D(model, part, u, xwidth, ywidth, tilt):
             Z1[np.isnan(Z1)] = 1.0
             Z2 = np.sin(r2)/r2
             Z2[np.isnan(Z2)] = 1.0
-            Z = Z1*Z2
+            Z = 2*np.pi*xwidth*ywidth*Z1*Z2
     return Z
 
 
