@@ -117,6 +117,7 @@ def get_fft1D(model, part, u, fwidth):
         if part == "real":
             fft = np.sin(v) / v
             fft[np.isnan(fft)] = 1.0
+            fft *= 2*fwidth
         else:
             fft = zeros
     elif model == "ramp":
@@ -125,6 +126,7 @@ def get_fft1D(model, part, u, fwidth):
         else:
             fft = -2.0 * (np.sin(v) - v * np.cos(v)) / (v * v)
             fft[np.isnan(fft)] = 0.0
+            fft *= 2*fwidth
     elif model == "delta":
         if part == "real":
             fft = np.cos(2*v)
@@ -162,6 +164,7 @@ def get_fft2D(model, part, u, xwidth, ywidth, tilt):
 # t is spatial dimension in mm
 t = np.linspace(-1.6, 1.6-0.0125, 256)
 u = np.fft.fftshift(np.fft.fftfreq(t.size, d=0.0125*8))
+
 xwidth = 1.0
 ywidth = 1.0
 tilt = 0.0
@@ -247,7 +250,7 @@ if dim == "1D":
     fig3.update_layout(
         title=ftrig_label[part],
         xaxis_title="t [sec]",
-        yaxis_title="",
+        yaxis_title="", yaxis_range=[-1, 1],
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
     )
@@ -263,7 +266,6 @@ if dim == "1D":
         height=300,
         margin=dict(l=0, r=40, t=30, b=20),
     )
-    # fig4.update_xaxes(range=[-6.0, 6.0], fixedrange=True)
     col2.plotly_chart(fig4, use_container_width=True)
 
 else:
